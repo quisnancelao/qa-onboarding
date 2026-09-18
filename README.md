@@ -46,11 +46,11 @@ Resultados de la ejecución registrada en `evidencias/carga_resultados.jtl`: 50 
 - `app/`: API local simulada con datos en memoria.
 - `tests/api/`: pruebas positivas y negativas de tracking.
 - `tests/transactional/`: pruebas de idempotencia de pagos.
+- `tests/async_tests/`: pruebas de reintentos, pagos duplicados y consulta de trabajos.
 - `pages/`: Page Object de SauceDemo.
 - `tests/web/`: prueba de compra simulada.
 - `tests/load/tracking_load.jmx`: plan de JMeter.
 - `evidencias/`: captura web y resultados de carga.
 
 ## Pendiente
-
-Pruebas de procesamiento asíncrono y configuración del pipeline de CI.
+Configuración del pipeline de CI.

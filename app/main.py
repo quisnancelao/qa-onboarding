@@ -1,6 +1,6 @@
-"""API mínima y aislada para demostrar pruebas de seguimiento."""
+"""API local para demostrar pruebas de seguimiento y pagos."""
 
-from threading import Lock
+from threading import Lock, Thread
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -18,6 +18,12 @@ class PaymentNotification(BaseModel):
     result: str = Field(pattern="^APPROVED$")
 
 
+class AsyncPaymentRequest(BaseModel):
+    tracking_id: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
+    fail_first_attempt: bool = False
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Onboarding QA - simulador")
     trackings: dict[str, dict[str, str]] = {}
@@ -26,6 +32,9 @@ def create_app() -> FastAPI:
     payment_operations = 0
     inventory_discounts = 0
     payment_lock = Lock()
+
+    jobs: dict[str, dict[str, object]] = {}
+    jobs_lock = Lock()
 
     @app.post("/trackings", status_code=201)
     def create_tracking(payload: TrackingRequest) -> dict[str, str]:
@@ -105,6 +114,68 @@ def create_app() -> FastAPI:
             "inventory_discounts": inventory_discounts,
             "inventory_remaining": inventory.get(tracking["product_code"], 0),
         }
+
+    def process_job(job_id: str, payload: AsyncPaymentRequest) -> None:
+        with jobs_lock:
+            jobs[job_id]["status"] = "RUNNING"
+
+        for attempt in (1, 2):
+            with jobs_lock:
+                jobs[job_id]["attempts"] = attempt
+
+            try:
+                if attempt == 1 and payload.fail_first_attempt:
+                    raise RuntimeError("Simulated temporary failure")
+
+                result = confirm_payment(
+                    PaymentNotification(
+                        tracking_id=payload.tracking_id,
+                        idempotency_key=payload.idempotency_key,
+                        result="APPROVED",
+                    )
+                )
+
+                with jobs_lock:
+                    jobs[job_id]["status"] = "COMPLETED"
+                    jobs[job_id]["result"] = result
+                return
+
+            except Exception as exc:
+                if attempt == 2:
+                    with jobs_lock:
+                        jobs[job_id]["status"] = "FAILED"
+                        jobs[job_id]["error"] = str(exc)
+
+    @app.post("/qa/payment-jobs", status_code=202)
+    def enqueue_payment(payload: AsyncPaymentRequest) -> dict[str, str]:
+        if payload.tracking_id not in trackings:
+            raise HTTPException(status_code=404, detail="Tracking not found")
+
+        job_id = f"JOB-QA-{uuid4().hex[:12]}"
+        with jobs_lock:
+            jobs[job_id] = {
+                "job_id": job_id,
+                "status": "QUEUED",
+                "attempts": 0,
+                "result": None,
+                "error": None,
+            }
+
+        Thread(
+            target=process_job,
+            args=(job_id, payload),
+            daemon=True,
+        ).start()
+
+        return {"job_id": job_id, "status": "QUEUED"}
+
+    @app.get("/qa/payment-jobs/{job_id}")
+    def get_payment_job(job_id: str) -> dict[str, object]:
+        with jobs_lock:
+            job = jobs.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail="Job not found")
+            return dict(job)
 
     return app
 
