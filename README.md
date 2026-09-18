@@ -1,6 +1,5 @@
-# Evaluación QA: Onboarding Digital
+#  Onboarding Digital
 
-Proyecto de pruebas QA sobre una API simulada local y un flujo web de compra en SauceDemo. Incluye pruebas de API, pagos duplicados, procesamiento asíncrono, automatización web, carga con JMeter y un pipeline de GitHub Actions.
 
 ## Requisitos
 
