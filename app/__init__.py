@@ -1,0 +1,1 @@
+"""Servicio simulado de onboarding."""
