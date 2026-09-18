@@ -1,6 +1,6 @@
 # Evaluación QA: Onboarding Digital
 
-Proyecto de pruebas con una API local simulada, un flujo web de compra en SauceDemo y una prueba de carga local con JMeter.
+Proyecto de pruebas con una API local simulada, un flujo de compra en SauceDemo y una prueba de carga local con JMeter.
 
 ## Requisitos
 
@@ -20,12 +20,21 @@ python -m venv .venv
 
 ## Pruebas automatizadas
 
+Para ejecutar las pruebas de API, pagos y procesamiento asíncrono:
+
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/api tests/transactional -v
+.\.venv\Scripts\python.exe -m pytest tests/api tests/transactional tests/async_tests -v
+```
+
+Para ejecutar la prueba web:
+
+```powershell
 .\.venv\Scripts\python.exe -m pytest tests/web -v
 ```
 
-Las pruebas de API cubren creación y consulta de tracking y casos negativos. Las pruebas transaccionales comprueban que una notificación de pago repetida no duplique la operación y que una clave de idempotencia no se reutilice para otro tracking.
+Las pruebas de API cubren la creación y consulta de tracking y casos negativos. Las pruebas transaccionales verifican que una notificación repetida no duplique el pago y que una clave de idempotencia no se reutilice para otro tracking.
+
+Las pruebas de procesamiento asíncrono verifican el reintento tras un fallo temporal, el manejo de trabajos duplicados y la respuesta ante un trabajo inexistente. Este procesamiento se simula localmente con datos en memoria.
 
 La prueba web recorre una compra simulada en [SauceDemo](https://www.saucedemo.com/) y guarda una captura en `evidencias/compra_saucedemo.png`.
 
@@ -39,7 +48,13 @@ Primero, iniciar la API desde la raíz del proyecto y dejar esa terminal abierta
 
 Luego, ejecutar `tests/load/tracking_load.jmx` con JMeter en modo consola. El plan envía 50 solicitudes de creación de tracking a `127.0.0.1:8000` y comprueba que respondan con HTTP 201.
 
-Resultados de la ejecución registrada en `evidencias/carga_resultados.jtl`: 50 solicitudes, 0 errores y 9 ms de tiempo promedio. Son resultados del simulador ejecutado localmente; pueden variar según el equipo.
+Resultados registrados en `evidencias/carga_resultados.jtl`: **50 solicitudes, 0 errores y 9 ms de tiempo promedio**. Son resultados del simulador local y pueden variar según el equipo.
+
+## Integración continua
+
+El archivo `.github/workflows/qa.yml` configura GitHub Actions para ejecutar las pruebas de API, pagos, procesamiento asíncrono y web en cada push y pull request.
+
+La ejecución del pipeline en GitHub queda por verificar cuando se suba el repositorio. La prueba de JMeter se ejecuta por separado y no forma parte de ese pipeline.
 
 ## Estructura
 
@@ -51,6 +66,4 @@ Resultados de la ejecución registrada en `evidencias/carga_resultados.jtl`: 50 
 - `tests/web/`: prueba de compra simulada.
 - `tests/load/tracking_load.jmx`: plan de JMeter.
 - `evidencias/`: captura web y resultados de carga.
-
-## Pendiente
-Configuración del pipeline de CI.
+- `.github/workflows/qa.yml`: configuración del pipeline.
