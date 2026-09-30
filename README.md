@@ -19,14 +19,19 @@ Desde PowerShell, ubicarse en la carpeta principal del proyecto:
 
 ```powershell
 cd "$env:USERPROFILE\Desktop\qa-onboarding"
+git clone https://github.com/quisnancelao/qa-onboarding.git qa-onboarding-res
+cd qa-onboarding-res
+code .
 ```
 
 Crear el entorno virtual:
 
 ```powershell
 python -m venv .venv
-```
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
+.\.venv\Scripts\Activate
 
+```
 Instalar las dependencias:
 
 ```powershell
